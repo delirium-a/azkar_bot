@@ -16,7 +16,7 @@ METHOD = 2
 
 MORNING_DELAY_MINUTES = 1
 EVENING_DELAY_MINUTES = 1
-DELAY_BETWEEN_POSTS_MINUTES = 1
+DELAY_BETWEEN_POSTS_MINUTES = 60
 
 MORNING_AZKAR = ["Аллахумма, Анта Рабби, ля иляха илля Анта, халякта-ни ва ана \'абду-кя,"
                  " ва ана \"аля \'ахди-кя ва ва\'ди-кя ма-стата\'ту. А\'узу би-кя мин шарри"
@@ -183,33 +183,20 @@ EVENING_AZKAR = ["А\n'узу би-кялимати Лляхи-т-таммати
                  "С именем Аллаха, с именем Которого ничто не причинит вред ни на земле, ни на небе, ведь Он - Слышащий, Знающий!\n3 раз. (Ахмад, ат Тирмизи)"
                  ]
 
+async def send_azkar_series(context: ContextTypes.DEFAULT_TYPE, messages: list[str]) -> None:
+    for text in messages:
+        await context.bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=text
+        )
+        await asyncio.sleep(DELAY_BETWEEN_POSTS_MINUTES)
 
 
 async def send_morning_azkar(context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = (
-        "🌿 Утренний азкар\n\n"
-        "тест\n\n"
-        "Не забудь прочитать утренние поминания."
-    )
-
-    await context.bot.send_message(
-        chat_id=CHANNEL_ID,
-        text=text
-    )
+    await send_azkar_series(context, MORNING_AZKAR)
 
 async def send_evening_azkar(context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = (
-        "🌙 Вечерний азкар\n\n"
-        "тест\n\n"
-        "Не забудь прочитать вечерние поминания."
-    )
-
-    await context.bot.send_message(
-        chat_id=CHANNEL_ID,
-        text=text
-    )
-
-
+    await send_azkar_series(context, EVENING_AZKAR)
 
 
 def get_prayer_time() -> str:
@@ -227,6 +214,7 @@ def get_prayer_time() -> str:
     
     return data["data"]["timings"]
 
+
 def parse_time(time_str: str, tzinfo: ZoneInfo) -> time:
     clean_time_str = time_str.split(" ")[0]
     hour, minute = map(int, clean_time_str.split(":"))
@@ -234,16 +222,18 @@ def parse_time(time_str: str, tzinfo: ZoneInfo) -> time:
     now = datetime.now(tz=tzinfo)    
     return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
+
 async def refresh_prayer_times(context: ContextTypes.DEFAULT_TYPE) -> None:
     tzinfo = ZoneInfo(TIMEZONE)
 
     timings = get_prayer_time()
-    fajr_dt = parse_time(timings["Fajr"], tzinfo)
-    asr_dt = parse_time(timings["Asr"], tzinfo)
+    fajr_dt = parse_time(timings["Fajr"], tzinfo) + timedelta(minutes=MORNING_DELAY_MINUTES)
+    asr_dt = parse_time(timings["Asr"], tzinfo) + timedelta(minutes=EVENING_DELAY_MINUTES)
+
     current_job = context.job_queue.jobs()
     
     for job in current_job:
-        if job.name in ("daily_morning_azkar_post", "daily_evening_azkar_post"):
+        if job.name in ("today_morning_azkar_post", "today_evening_azkar_post"):
             job.schedule_removal()
 
     now = datetime.now(tz=tzinfo)
