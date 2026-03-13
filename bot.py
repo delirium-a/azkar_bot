@@ -183,6 +183,7 @@ EVENING_AZKAR = ["А\n'узу би-кялимати Лляхи-т-таммати
                  "С именем Аллаха, с именем Которого ничто не причинит вред ни на земле, ни на небе, ведь Он - Слышащий, Знающий!\n3 раз. (Ахмад, ат Тирмизи)"
                  ]
 
+
 async def send_azkar_series(context: ContextTypes.DEFAULT_TYPE, messages: list[str]) -> None:
     for text in messages:
         await context.bot.send_message(
@@ -194,6 +195,7 @@ async def send_azkar_series(context: ContextTypes.DEFAULT_TYPE, messages: list[s
 
 async def send_morning_azkar(context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_azkar_series(context, MORNING_AZKAR)
+
 
 async def send_evening_azkar(context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_azkar_series(context, EVENING_AZKAR)
@@ -219,7 +221,8 @@ def parse_time(time_str: str, tzinfo: ZoneInfo) -> time:
     clean_time_str = time_str.split(" ")[0]
     hour, minute = map(int, clean_time_str.split(":"))
 
-    now = datetime.now(tz=tzinfo)    
+    now = datetime.now(tz=tzinfo)  
+      
     return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
@@ -241,21 +244,18 @@ async def refresh_prayer_times(context: ContextTypes.DEFAULT_TYPE) -> None:
     if fajr_dt > now:
         context.job_queue.run_once(
             callback=send_morning_azkar,
-            time=fajr_dt,
+            when=fajr_dt,
             name="today_morning_azkar_post"
         )
 
     if asr_dt > now:
         context.job_queue.run_once(
             callback=send_evening_azkar,
-            time=asr_dt,
+            when=asr_dt,
             name="today_evening_azkar_post"
         )
 
     print(f"Обновлены расписания на сегодня: Фаджр в {fajr_dt.time()}, Аср в {asr_dt.time()}", flush=True)
-
-
-
 
 
 def main() -> None:
